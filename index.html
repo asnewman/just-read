@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Text Reader</title>
+    <title>JustRead</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -143,6 +143,7 @@
         });
 
         async function fetchAzureTTS(text) {
+            naturalReadButton.disabled = true
             // Prepare SSML (Speech Synthesis Markup Language)
             const ssml = `<speak version='1.0' xml:lang='en-US'>
               <voice xml:lang='en-US' xml:gender='Female' name='en-US-JennyNeural'>
@@ -167,6 +168,7 @@
             } else {
                 console.error('Error fetching TTS data:', audioResponse.status, audioResponse.statusText);
             }
+            naturalReadButton.disabled = false
         }
 
     </script>

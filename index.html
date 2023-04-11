@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text Reader</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            background-color: #222;
+            color: #f1f1f1;
+        }
+
+        textarea {
+            width: 100%;
+            height: 200px;
+            resize: none;
+            box-sizing: border-box;
+            font-size: 18px;
+            padding: 10px;
+            margin-bottom: 20px;
+            background-color: #333;
+            color: #f1f1f1;
+            border: 2px solid #555;
+        }
+
+        .controls {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        button {
+            font-size: 18px;
+            padding: 10px 20px;
+            margin-right: 10px;
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #1976D2;
+        }
+
+        .speed-control {
+            display: flex;
+            align-items: center;
+        }
+
+        #speed-input {
+            width: 150px;
+            margin-left: 10px;
+        }
+
+        #text-display {
+            font-size: 30px;
+            width: 100%;
+            text-align: center;
+            box-sizing: border-box;
+            border: 2px solid #555;
+            padding: 20px;
+            background-color: #333;
+            color: #f1f1f1;
+        }
+
+    </style>
+</head>
+
+<body>
+    <textarea id="text-input" placeholder="Type or paste your text here..."></textarea>
+    <div class="controls">
+        <button id="read-button">Read</button>
+        <button id="natural-read-button">Natural Read</button>
+        <button id="stop-button">Stop</button>
+        <div class="speed-control">
+            <label for="speed-input">Speed: </label>
+            <input type="range" id="speed-input" min="0.5" max="2" step="0.1" value="1">
+        </div>
+    </div>
+    <div id="text-display"></div>
+    <script>
+        const textInput = document.getElementById('text-input');
+        const textDisplay = document.getElementById('text-display');
+        const readButton = document.getElementById('read-button');
+        const naturalReadButton = document.getElementById('natural-read-button');
+        const stopButton = document.getElementById('stop-button');
+        const speedInput = document.getElementById('speed-input');
+
+        let words = [];
+
+        const synth = window.speechSynthesis;
+
+        function addDisplayText(text) {
+            textDisplay.innerHTML = text
+        }
+
+        function speak() {
+            const textInputValue = textInput.value;
+            const utterance = new SpeechSynthesisUtterance(textInput.value.replaceAll('—', ' '));
+            utterance.rate = parseFloat(speedInput.value);
+            synth.speak(utterance);
+
+            utterance.addEventListener('boundary', (event) => {
+                if (event.name === 'word') {
+                    const charIndex = event.charIndex;
+                    const wordStartIndex = textInputValue.lastIndexOf(' ', charIndex) + 1;
+                    const wordEndIndex = textInputValue.indexOf(' ', charIndex);
+
+                    const currentWord = (wordEndIndex === -1)
+                        ? textInputValue.slice(wordStartIndex)
+                        : textInputValue.slice(wordStartIndex, wordEndIndex);
+
+                    addDisplayText(currentWord);
+                }
+            });
+        }
+
+        readButton.addEventListener('click', () => {
+            words = textInput.value.replaceAll('—', ' ').split(/\s+/);
+            addDisplayText("");
+            if (synth.speaking) {
+                synth.cancel();
+            }
+            speak();
+        });
+
+        naturalReadButton.addEventListener('click', () => {
+            fetchAzureTTS(textInput.value);
+        });
+
+        stopButton.addEventListener('click', () => {
+            if (synth.speaking) {
+                synth.cancel();
+            }
+        });
+
+        async function fetchAzureTTS(text) {
+            // Prepare SSML (Speech Synthesis Markup Language)
+            const ssml = `<speak version='1.0' xml:lang='en-US'>
+              <voice xml:lang='en-US' xml:gender='Female' name='en-US-JennyNeural'>
+                <prosody rate='${parseFloat(speedInput.value)}'>
+                  ${text}
+                </prosody>
+              </voice>
+            </speak>
+            `;
+
+            // Get the audio data
+            const audioResponse = await fetch("https://weary-train-bull.cyclic.app/api/speech-to-text", {
+                method: 'POST',
+                body: ssml,
+            });
+
+            if (audioResponse.ok) {
+                const audioBlob = await audioResponse.blob();
+                const audioUrl = URL.createObjectURL(audioBlob);
+                const audio = new Audio(audioUrl);
+                audio.play();
+            } else {
+                console.error('Error fetching TTS data:', audioResponse.status, audioResponse.statusText);
+            }
+        }
+
+    </script>
+</body>
+
+</html>
+
